@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Local env/config
+.env
+frontend/.env
+backend/.env
+
+# Frontend artifacts
+frontend/node_modules/
+frontend/dist/
+
+# Local cloned repositories cache
+cloned_repos/
+
+# IDE/editor
+.idea/
+.vscode/
