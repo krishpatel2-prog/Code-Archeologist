@@ -8,6 +8,7 @@ Instead of manually exploring thousands of files, the system converts raw source
 
 It combines **static analysis, dependency graphs, and LLM reasoning** to help developers quickly understand unfamiliar codebases.
 
+Live Demo: https://code-archeologist-frontend.onrender.com
 ---
 
 # ✨ What This Tool Does
