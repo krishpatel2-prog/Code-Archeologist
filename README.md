@@ -2,6 +2,8 @@
 
 ### Understand any codebase in minutes.
 
+⚠️ Currently supports Python repositories only.
+
 AI Code Archeologist is an **architecture intelligence tool** that analyzes software repositories and automatically uncovers system structure, module dependencies, risk hotspots, and safe refactoring zones.
 
 Instead of manually exploring thousands of files, the system converts raw source code into **structured architectural intelligence**.
