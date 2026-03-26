@@ -26,3 +26,4 @@ cloned_repos/
 .vscode/
 
 *.mp4
+!new.mp4
