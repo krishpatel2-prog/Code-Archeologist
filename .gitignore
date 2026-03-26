@@ -24,3 +24,5 @@ cloned_repos/
 # IDE/editor
 .idea/
 .vscode/
+
+*.mp4
