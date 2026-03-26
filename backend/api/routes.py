@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+from pathlib import PureWindowsPath, PurePosixPath
+
+from fastapi import APIRouter, File, Form, UploadFile
 from pydantic import BaseModel
 import os
 
@@ -9,6 +11,7 @@ from backend.services.job_manager import (
 )
 from backend.llm.wiki_qa import ask_wiki
 from backend.analysis.impact import analyze_impact
+from backend.ingestion.upload_repo import create_uploaded_repo
 
 
 router = APIRouter()
@@ -29,6 +32,45 @@ class ImpactRequest(BaseModel):
 @router.post("/analyze")
 def analyze(request: AnalyzeRequest):
     job_id = start_analysis(request.repo_path)
+    return {"job_id": job_id}
+
+
+def _derive_repo_name(repo_path: str, relative_paths: list[str]) -> str:
+    cleaned = repo_path.strip()
+    if cleaned:
+        windows_name = PureWindowsPath(cleaned).name
+        posix_name = PurePosixPath(cleaned).name
+        if windows_name:
+            return windows_name
+        if posix_name:
+            return posix_name
+
+    if relative_paths:
+        first = relative_paths[0].replace("\\", "/").strip("/")
+        if first:
+            return first.split("/", 1)[0]
+
+    return "Uploaded Repository"
+
+
+@router.post("/analyze-upload")
+def analyze_upload(
+    repo_path: str = Form(...),
+    relative_paths: list[str] = Form(...),
+    files: list[UploadFile] = File(...),
+):
+    if not files:
+        raise ValueError("No files were uploaded.")
+    if len(files) != len(relative_paths):
+        raise ValueError("Uploaded files and relative paths must match.")
+
+    upload_dir = create_uploaded_repo(files, relative_paths)
+    repo_name = _derive_repo_name(repo_path, relative_paths)
+    job_id = start_analysis(
+        upload_dir,
+        repo_name_override=repo_name,
+        display_repo_path=repo_path.strip() or repo_name,
+    )
     return {"job_id": job_id}
 
 
