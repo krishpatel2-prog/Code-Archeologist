@@ -1,6 +1,7 @@
 import { AnalyzeHero } from '../features/analyze/AnalyzeHero'
 import { AnalyzeProgress } from '../features/analyze/AnalyzeProgress'
 import type { AnalysisStep } from '../features/analysis/analysis-store'
+import type { UploadedRepoFile } from '../services/api'
 
 interface AnalyzePageProps {
   repoInput: string
@@ -12,6 +13,7 @@ interface AnalyzePageProps {
   error: string | null
   onChangeInput: (value: string) => void
   onAnalyze: () => void
+  onAnalyzeUploaded: (repoPath: string, files: UploadedRepoFile[]) => Promise<void>
 }
 
 export function AnalyzePage({
@@ -24,6 +26,7 @@ export function AnalyzePage({
   error,
   onChangeInput,
   onAnalyze,
+  onAnalyzeUploaded,
 }: AnalyzePageProps) {
   return (
     <div className="flex min-h-[calc(100vh-64px)] items-center justify-center">
@@ -34,6 +37,7 @@ export function AnalyzePage({
           error={error}
           onChange={onChangeInput}
           onAnalyze={onAnalyze}
+          onAnalyzeUploaded={onAnalyzeUploaded}
         />
         {isRunning ? (
           <AnalyzeProgress

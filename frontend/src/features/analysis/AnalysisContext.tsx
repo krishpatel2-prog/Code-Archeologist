@@ -6,7 +6,13 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react'
-import { analyzeRepository, getAnalysisStatus, getWiki } from '../../services/api'
+import {
+  analyzeRepository,
+  analyzeUploadedRepository,
+  getAnalysisStatus,
+  getWiki,
+  type UploadedRepoFile,
+} from '../../services/api'
 import {
   AnalysisContext,
   type AnalysisContextValue,
@@ -154,6 +160,41 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
     }
   }, [repoInput, startPolling, stopPolling])
 
+  const startUploadedAnalysis = useCallback(
+    async (repoPath: string, files: UploadedRepoFile[]) => {
+      const trimmedPath = repoPath.trim()
+      if (!trimmedPath) {
+        setError('Enter a local path or GitHub URL.')
+        return
+      }
+      if (files.length === 0) {
+        setError('Select a repository folder that contains files to analyze.')
+        return
+      }
+
+      stopPolling()
+      setRepoInput(trimmedPath)
+      setError(null)
+      setWiki(null)
+      setJobId(null)
+      setStatus('pending')
+      setProgress(8)
+      setStatusMessage('Scanning repository files')
+      setRepoName(resolveRepoName(trimmedPath))
+
+      try {
+        const response = await analyzeUploadedRepository(trimmedPath, files)
+        setJobId(response.job_id)
+        startPolling(response.job_id)
+      } catch (err) {
+        setStatus('failed')
+        setError(err instanceof Error ? err.message : 'Failed to start analysis.')
+        setStatusMessage('Analysis failed')
+      }
+    },
+    [startPolling, stopPolling],
+  )
+
   const resetAnalysis = useCallback(() => {
     stopPolling()
     setRepoInput('')
@@ -200,6 +241,7 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
       error,
       steps,
       startAnalysis,
+      startUploadedAnalysis,
       resetAnalysis,
     }),
     [
@@ -213,6 +255,7 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
       error,
       steps,
       startAnalysis,
+      startUploadedAnalysis,
       resetAnalysis,
     ],
   )

@@ -6,15 +6,22 @@ import type {
   WikiResponse,
 } from '../types/api'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://127.0.0.1:8000'
+
+export type UploadedRepoFile = {
+  file: File
+  relativePath: string
+}
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers ?? {})
+  if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json')
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
     ...init,
+    headers,
   })
 
   if (!response.ok) {
@@ -29,6 +36,23 @@ export async function analyzeRepository(repoPath: string): Promise<AnalyzeRespon
   return request('/analyze', {
     method: 'POST',
     body: JSON.stringify({ repo_path: repoPath }),
+  })
+}
+
+export async function analyzeUploadedRepository(
+  repoPath: string,
+  files: UploadedRepoFile[],
+): Promise<AnalyzeResponse> {
+  const formData = new FormData()
+  formData.append('repo_path', repoPath)
+  files.forEach(({ file, relativePath }) => {
+    formData.append('files', file)
+    formData.append('relative_paths', relativePath)
+  })
+
+  return request('/analyze-upload', {
+    method: 'POST',
+    body: formData,
   })
 }
 

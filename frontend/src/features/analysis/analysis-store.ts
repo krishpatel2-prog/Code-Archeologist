@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { AnalysisStatus, WikiResponse } from '../../types/api'
+import type { UploadedRepoFile } from '../../services/api'
 
 export interface AnalysisStep {
   key: string
@@ -21,6 +22,7 @@ export interface AnalysisContextValue {
   error: string | null
   steps: AnalysisStep[]
   startAnalysis: () => Promise<void>
+  startUploadedAnalysis: (repoPath: string, files: UploadedRepoFile[]) => Promise<void>
   resetAnalysis: () => void
 }
 

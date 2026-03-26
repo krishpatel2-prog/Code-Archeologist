@@ -30,6 +30,7 @@ function App() {
           error={analysis.error}
           onChangeInput={analysis.setRepoInput}
           onAnalyze={analysis.startAnalysis}
+          onAnalyzeUploaded={analysis.startUploadedAnalysis}
         />
       ) : null}
 
