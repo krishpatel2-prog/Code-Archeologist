@@ -10,7 +10,7 @@ It combines **static analysis, dependency graphs, and LLM reasoning** to help de
 
 ⚠️ Currently supports Python repositories only.
 
-Live Demo: https://code-archeologist-frontend.onrender.com
+Live Demo: [https://code-archeologist-frontend.onrender.com](https://code-archeologist-frontend.onrender.com)
 ---
 
 # ✨ What This Tool Does
