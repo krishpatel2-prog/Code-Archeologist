@@ -12,4 +12,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/health", status_code=200)
+def health_check():
+    print("Health endpoint was hit")
+    return {"status": "ok"}
+
 app.include_router(router)
