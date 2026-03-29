@@ -13,7 +13,7 @@ app.add_middleware(
 )
 
 
-@app.get("/health", status_code=200)
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health_check():
     print("Health endpoint was hit")
     return {"status": "ok"}
