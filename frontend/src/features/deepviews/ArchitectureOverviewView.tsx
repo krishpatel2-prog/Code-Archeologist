@@ -2,6 +2,7 @@ import { ArrowDown, Layers } from 'lucide-react'
 import { Section } from '../../components/ui/Section'
 import type { WikiResponse } from '../../types/api'
 import { getArchitectureSummary, getLayers } from '../../utils/wiki'
+import { toRelativePath } from '../../utils/path'
 
 interface ArchitectureOverviewViewProps {
   wiki: WikiResponse
@@ -10,6 +11,7 @@ interface ArchitectureOverviewViewProps {
 export function ArchitectureOverviewView({ wiki }: ArchitectureOverviewViewProps) {
   const summary = getArchitectureSummary(wiki)
   const layers = getLayers(wiki)
+  const evidencePaths = layers.flatMap((layer) => layer.evidence)
 
   return (
     <Section
@@ -21,24 +23,20 @@ export function ArchitectureOverviewView({ wiki }: ArchitectureOverviewViewProps
       </div>
 
       <div className="mt-4 rounded-xl border border-[var(--color-border)] bg-slate-900/35 p-4">
-        <h3 className="mb-3 text-sm font-semibold text-slate-100">Layered Architecture Diagram</h3>
+        <h3 className="mb-3 text-sm font-semibold text-slate-100">Architecture Diagram</h3>
         <div className="mx-auto flex max-w-md flex-col items-center">
-          {[
-            'Presentation Layer',
-            'Business Logic Layer',
-            'Domain Model Layer',
-            'Data Access Layer',
-            'Infrastructure Layer',
-          ].map((layer, index, list) => (
-            <div key={layer} className="flex w-full flex-col items-center">
+          {layers.length > 0 ? layers.map((layer, index, list) => (
+            <div key={`${layer.name}-${index}`} className="flex w-full flex-col items-center">
               <div className="w-full rounded-lg border border-slate-700 bg-slate-800/70 px-4 py-2 text-center text-sm text-slate-200 transition-all hover:border-emerald-500/45 hover:bg-slate-800">
-                {layer}
+                {layer.name}
               </div>
               {index < list.length - 1 ? (
                 <ArrowDown className="my-1 h-4 w-4 text-slate-500" />
               ) : null}
             </div>
-          ))}
+          )) : (
+            <p className="text-sm text-slate-400">No architecture layers available in wiki response.</p>
+          )}
         </div>
       </div>
 
@@ -53,6 +51,18 @@ export function ArchitectureOverviewView({ wiki }: ArchitectureOverviewViewProps
               <span className="text-xs text-slate-500">Layer {index + 1}</span>
             </div>
             <p className="text-sm text-slate-400">{layer.responsibility}</p>
+            {layer.evidence.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {layer.evidence.slice(0, 4).map((item) => (
+                  <span
+                    key={`${layer.name}-${item}`}
+                    className="rounded-md border border-slate-700 bg-slate-900/45 px-2 py-1 text-xs text-slate-300"
+                  >
+                    {toRelativePath(item, evidencePaths)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
         {layers.length === 0 ? (

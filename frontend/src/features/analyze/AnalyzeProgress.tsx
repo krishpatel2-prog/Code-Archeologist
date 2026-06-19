@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   FolderSearch,
   LoaderCircle,
-  Network,
 } from 'lucide-react'
 import type { AnalysisStep } from '../../features/analysis/analysis-store'
 import { Card } from '../../components/ui/Card'
@@ -18,10 +17,11 @@ interface AnalyzeProgressProps {
 
 export function AnalyzeProgress({ progress, statusMessage, repoName, steps }: AnalyzeProgressProps) {
   const iconByStep: Record<string, typeof FolderSearch> = {
-    '📂 Scanning repository files': FolderSearch,
-    '🧠 Building dependency graph': BrainCircuit,
-    '🏗 Detecting architecture patterns': Network,
-    '📘 Generating intelligence wiki': BookCheck,
+    'Preparing repository': FolderSearch,
+    'Uploading files': FolderSearch,
+    'Starting analysis': LoaderCircle,
+    'Building dependency graph': BrainCircuit,
+    'Generating intelligence wiki': BookCheck,
   }
 
   return (

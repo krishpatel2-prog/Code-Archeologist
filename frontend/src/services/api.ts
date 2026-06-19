@@ -13,6 +13,16 @@ export type UploadedRepoFile = {
   relativePath: string
 }
 
+export interface UploadProgress {
+  phase: 'preparing' | 'uploading' | 'starting'
+  processed: number
+  total: number
+}
+
+export interface UploadOptions {
+  onProgress?: (progress: UploadProgress) => void
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers ?? {})
   if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
@@ -26,6 +36,16 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const text = await response.text()
+    try {
+      const payload = JSON.parse(text) as { detail?: unknown }
+      if (typeof payload.detail === 'string') {
+        throw new Error(payload.detail)
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'SyntaxError') {
+        throw err
+      }
+    }
     throw new Error(text || `Request failed: ${response.status}`)
   }
 
@@ -42,18 +62,33 @@ export async function analyzeRepository(repoPath: string): Promise<AnalyzeRespon
 export async function analyzeUploadedRepository(
   repoPath: string,
   files: UploadedRepoFile[],
+  options: UploadOptions = {},
 ): Promise<AnalyzeResponse> {
   const formData = new FormData()
   formData.append('repo_path', repoPath)
-  files.forEach(({ file, relativePath }) => {
+  options.onProgress?.({ phase: 'preparing', processed: 0, total: files.length })
+
+  for (let index = 0; index < files.length; index += 1) {
+    const { file, relativePath } = files[index]
     formData.append('files', file)
     formData.append('relative_paths', relativePath)
-  })
+    if (index % 1000 === 0) {
+      options.onProgress?.({ phase: 'preparing', processed: index + 1, total: files.length })
+      await yieldToBrowser()
+    }
+  }
 
-  return request('/analyze-upload', {
-    method: 'POST',
-    body: formData,
+  options.onProgress?.({ phase: 'uploading', processed: 0, total: 1 })
+
+  const response = await uploadFormData<AnalyzeResponse>('/analyze-upload', formData, (loaded, total) => {
+    options.onProgress?.({
+      phase: 'uploading',
+      processed: loaded,
+      total: total || loaded || 1,
+    })
   })
+  options.onProgress?.({ phase: 'starting', processed: files.length, total: files.length })
+  return response
 }
 
 export async function getAnalysisStatus(jobId: string): Promise<StatusResponse> {
@@ -133,4 +168,51 @@ export async function getImpactAnalysis(
     indirect_dependents: indirect,
     total_impact_radius: radius,
   }
+}
+
+function yieldToBrowser(): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, 0)
+  })
+}
+
+function uploadFormData<T>(
+  path: string,
+  formData: FormData,
+  onUploadProgress: (loaded: number, total: number) => void,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${API_BASE_URL}${path}`)
+
+    xhr.upload.onprogress = (event) => {
+      onUploadProgress(event.loaded, event.lengthComputable ? event.total : 0)
+    }
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve(JSON.parse(xhr.responseText) as T)
+        } catch {
+          reject(new Error('Invalid upload response payload.'))
+        }
+        return
+      }
+
+      try {
+        const payload = JSON.parse(xhr.responseText) as { detail?: unknown }
+        if (typeof payload.detail === 'string') {
+          reject(new Error(payload.detail))
+          return
+        }
+      } catch {
+        // Fall through to generic response text error.
+      }
+      reject(new Error(xhr.responseText || `Request failed: ${xhr.status}`))
+    }
+
+    xhr.onerror = () => reject(new Error('Upload failed. Check backend availability and retry.'))
+    xhr.onabort = () => reject(new Error('Upload was cancelled.'))
+    xhr.send(formData)
+  })
 }

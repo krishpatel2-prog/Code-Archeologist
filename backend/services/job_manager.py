@@ -114,10 +114,13 @@ def start_analysis(
             repo_path, repo_name = load_repo(repo_input)
             final_repo_name = repo_name_override or repo_name
             result = graph.invoke({
+                "job_id": job_id,
                 "repo_path": repo_path
             })
+            result["source_repo_path"] = repo_path
             if display_repo_path:
                 result = _rewrite_result_paths(result, repo_path, display_repo_path)
+                result["source_repo_path"] = repo_path
             result["repo_name"] = final_repo_name
             result["repo_path"] = display_repo_path or repo_path
             with jobs_lock:

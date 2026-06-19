@@ -1,5 +1,5 @@
 import { FolderTree } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FileTree } from '../../components/FileTree'
 import { Badge } from '../../components/ui/Badge'
 import { Section } from '../../components/ui/Section'
@@ -16,9 +16,6 @@ export function FileStructureView({ wiki }: FileStructureViewProps) {
   const tree = useMemo(() => buildFileTree(paths), [paths])
   const moduleSummaries = useMemo(() => extractModuleSummaries(wiki), [wiki])
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
-  useEffect(() => {
-    setSelectedFile(null)
-  }, [paths])
   const selectedSummary = useMemo(
     () => resolveSummaryForFile(selectedFile, moduleSummaries),
     [moduleSummaries, selectedFile],

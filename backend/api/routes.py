@@ -1,6 +1,6 @@
 from pathlib import PureWindowsPath, PurePosixPath
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 import os
 
@@ -60,9 +60,12 @@ def analyze_upload(
     files: list[UploadFile] = File(...),
 ):
     if not files:
-        raise ValueError("No files were uploaded.")
+        raise HTTPException(status_code=400, detail="No files were uploaded.")
     if len(files) != len(relative_paths):
-        raise ValueError("Uploaded files and relative paths must match.")
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded files and relative paths must match.",
+        )
 
     upload_dir = create_uploaded_repo(files, relative_paths)
     repo_name = _derive_repo_name(repo_path, relative_paths)
@@ -95,7 +98,7 @@ def status(job_id: str):
 def wiki(job_id: str):
     result = get_result(job_id)
     if not result:
-        return {"error": "Job not completed"}
+        raise HTTPException(status_code=404, detail="Job not completed")
 
     wiki_payload = result.get("wiki") or {}
     if isinstance(wiki_payload, dict):
@@ -107,9 +110,9 @@ def wiki(job_id: str):
 def ask(job_id: str, request: AskRequest):
     result = get_result(job_id)
     if not result:
-        return {"error": "Job not completed"}
+        raise HTTPException(status_code=404, detail="Job not completed")
 
-    answer = ask_wiki(request.question)
+    answer = ask_wiki(job_id, request.question, result)
     return {"answer": answer}
 
 
@@ -152,14 +155,20 @@ def _resolve_target_file(result: dict, target_file: str) -> str | None:
 def impact(job_id: str, request: ImpactRequest):
     result = get_result(job_id)
     if not result:
-        return {"error": "Job not completed"}
+        raise HTTPException(status_code=404, detail="Job not completed")
 
     graph = result.get("dependency_graph")
     if graph is None:
-        return {"error": "Dependency graph unavailable for this job"}
+        raise HTTPException(
+            status_code=404,
+            detail="Dependency graph unavailable for this job",
+        )
 
     target = _resolve_target_file(result, request.target_file)
     if not target:
-        return {"error": "Target file not found in dependency graph"}
+        raise HTTPException(
+            status_code=404,
+            detail="Target file not found in dependency graph",
+        )
 
     return analyze_impact(target, graph)

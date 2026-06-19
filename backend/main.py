@@ -117,5 +117,5 @@ explanation = generate_impact_explanation(
 #---------q&a-------------
 print("\n🧠 Q&A TEST:\n")
 
-answer = ask_wiki("Where is GitHub pull request logic handled?")
+answer = ask_wiki("manual", "Where is GitHub pull request logic handled?")
 print(answer)

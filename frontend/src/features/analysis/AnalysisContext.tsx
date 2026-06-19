@@ -21,10 +21,11 @@ import {
 import type { AnalysisStatus, WikiResponse } from '../../types/api'
 
 const STEP_LABELS = [
-  '📂 Scanning repository files',
-  '🧠 Building dependency graph',
-  '🏗 Detecting architecture patterns',
-  '📘 Generating intelligence wiki',
+  'Preparing repository',
+  'Uploading files',
+  'Starting analysis',
+  'Building dependency graph',
+  'Generating intelligence wiki',
 ]
 const MAX_POLL_DURATION_MS = 4 * 60 * 1000
 
@@ -41,6 +42,7 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
   const pollTick = useRef(0)
   const pollStartedAt = useRef(0)
   const isPolling = useRef(false)
+  const activeJobRef = useRef<string | null>(null)
 
   const stopPolling = useCallback(() => {
     if (pollTimer.current) {
@@ -48,11 +50,16 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
       pollTimer.current = null
     }
     isPolling.current = false
+    activeJobRef.current = null
+  }, [])
+
+  const isActiveJob = useCallback((nextJobId: string) => {
+    return isPolling.current && activeJobRef.current === nextJobId
   }, [])
 
   const setProgressFromTick = useCallback((tick: number) => {
-    const stageIndex = Math.min(STEP_LABELS.length - 1, Math.floor(tick / 2))
-    const nextProgress = Math.min(90, 14 + tick * 7)
+    const stageIndex = Math.min(STEP_LABELS.length - 1, 3 + Math.floor(tick / 3))
+    const nextProgress = Math.min(92, 35 + tick * 5)
     setProgress((current) => (nextProgress > current ? nextProgress : current))
     setStatusMessage(STEP_LABELS[stageIndex])
   }, [])
@@ -63,11 +70,13 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
       pollTick.current = 0
       pollStartedAt.current = Date.now()
       isPolling.current = true
+      activeJobRef.current = nextJobId
 
       const poll = async () => {
-        if (!isPolling.current) return
+        if (!isActiveJob(nextJobId)) return
         try {
           if (Date.now() - pollStartedAt.current > MAX_POLL_DURATION_MS) {
+            if (!isActiveJob(nextJobId)) return
             stopPolling()
             setStatus('failed')
             setError(
@@ -78,6 +87,7 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
           }
 
           const response = await getAnalysisStatus(nextJobId)
+          if (!isActiveJob(nextJobId)) return
           if (response.repo_name) {
             setRepoName(response.repo_name)
           }
@@ -85,19 +95,21 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
           setProgressFromTick(pollTick.current)
 
           if (response.status === 'completed') {
-            stopPolling()
             setStatus('completed')
-            setStatusMessage('📘 Generating intelligence wiki')
+            setStatusMessage('Generating intelligence wiki')
             setProgress(99)
 
             const wikiResponse = await getWiki(nextJobId)
+            if (!isActiveJob(nextJobId)) return
             if (typeof wikiResponse.error === 'string') {
               throw new Error(wikiResponse.error)
             }
             setProgress(100)
-            setStatusMessage('✅ Analysis Complete')
+            setStatusMessage('Analysis complete')
             await new Promise((resolve) => setTimeout(resolve, 900))
+            if (!isActiveJob(nextJobId)) return
             setWiki(wikiResponse)
+            stopPolling()
             return
           }
 
@@ -121,6 +133,7 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
             void poll()
           }, 2000)
         } catch (err) {
+          if (!isActiveJob(nextJobId)) return
           stopPolling()
           setStatus('failed')
           setError(err instanceof Error ? err.message : 'Polling failed.')
@@ -130,7 +143,7 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
 
       void poll()
     },
-    [setProgressFromTick, stopPolling],
+    [isActiveJob, setProgressFromTick, stopPolling],
   )
 
   const startAnalysis = useCallback(async () => {
@@ -146,7 +159,7 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
     setJobId(null)
     setStatus('pending')
     setProgress(8)
-    setStatusMessage('📂 Scanning repository files')
+    setStatusMessage('Starting analysis')
     setRepoName(resolveRepoName(repoPath))
 
     try {
@@ -178,12 +191,28 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
       setWiki(null)
       setJobId(null)
       setStatus('pending')
-      setProgress(8)
-      setStatusMessage('Scanning repository files')
+      setProgress(6)
+      setStatusMessage('Preparing repository')
       setRepoName(resolveRepoName(trimmedPath))
 
       try {
-        const response = await analyzeUploadedRepository(trimmedPath, files)
+        const response = await analyzeUploadedRepository(trimmedPath, files, {
+          onProgress: ({ phase, processed, total }) => {
+            const ratio = total > 0 ? processed / total : 0
+            if (phase === 'preparing') {
+              setStatusMessage('Preparing repository')
+              setProgress(Math.max(6, Math.min(20, Math.round(6 + ratio * 14))))
+            }
+            if (phase === 'uploading') {
+              setStatusMessage('Uploading files')
+              setProgress(Math.max(22, Math.min(30, Math.round(22 + ratio * 8))))
+            }
+            if (phase === 'starting') {
+              setStatusMessage('Starting analysis')
+              setProgress(32)
+            }
+          },
+        })
         setJobId(response.job_id)
         startPolling(response.job_id)
       } catch (err) {
@@ -213,7 +242,7 @@ export function AnalysisProvider({ children }: PropsWithChildren) {
 
   const steps = useMemo<AnalysisStep[]>(() => {
     return STEP_LABELS.map((label, index) => {
-      const threshold = [20, 45, 70, 90][index]
+      const threshold = [12, 24, 34, 58, 90][index]
       return {
         key: label,
         label,

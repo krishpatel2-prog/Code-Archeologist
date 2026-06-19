@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { askQuestion } from '../services/api'
 
 export interface Message {
@@ -7,16 +7,23 @@ export interface Message {
   content: string
 }
 
+const WELCOME_MESSAGE: Message = {
+  id: 'welcome',
+  role: 'assistant',
+  content:
+    'Ask about architecture boundaries, hotspots, impact risk, or safe refactor zones.',
+}
+
 export function useAskChat(jobId: string | null) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content:
-        'Ask about architecture boundaries, hotspots, impact risk, or safe refactor zones.',
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE])
   const [isTyping, setIsTyping] = useState(false)
+  const activeJobRef = useRef<string | null>(jobId)
+
+  useEffect(() => {
+    activeJobRef.current = jobId
+    setMessages([WELCOME_MESSAGE])
+    setIsTyping(false)
+  }, [jobId])
 
   const sendMessage = async (question: string) => {
     const trimmed = question.trim()
@@ -33,12 +40,16 @@ export function useAskChat(jobId: string | null) {
         throw new Error('No analysis job is available for asking questions.')
       }
 
-      const response = await askQuestion(jobId, trimmed)
+      const requestJobId = jobId
+      const response = await askQuestion(requestJobId, trimmed)
+      if (activeJobRef.current !== requestJobId) return
+
       setMessages((current) => [
         ...current,
         { id: `assistant-${Date.now()}`, role: 'assistant', content: response.answer },
       ])
     } catch (err) {
+      if (activeJobRef.current !== jobId) return
       setMessages((current) => [
         ...current,
         {
@@ -48,12 +59,14 @@ export function useAskChat(jobId: string | null) {
         },
       ])
     } finally {
-      setIsTyping(false)
+      if (activeJobRef.current === jobId) {
+        setIsTyping(false)
+      }
     }
   }
 
   const clear = () => {
-    setMessages((current) => current.slice(0, 1))
+    setMessages([WELCOME_MESSAGE])
   }
 
   return { messages, isTyping, sendMessage, clear }

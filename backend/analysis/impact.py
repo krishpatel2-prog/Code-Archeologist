@@ -8,16 +8,16 @@ def analyze_impact(target_file: str, graph: nx.DiGraph):
         }
 
     # Direct dependents (who imports this file)
-    direct_dependents = list(graph.predecessors(target_file))
+    direct_dependents = sorted(graph.predecessors(target_file))
 
     # Indirect dependents (transitive closure)
-    indirect_dependents = list(nx.ancestors(graph, target_file))
+    indirect_dependents = set(nx.ancestors(graph, target_file))
 
     # Remove direct ones from indirect list
-    indirect_only = [
+    indirect_only = sorted(
         f for f in indirect_dependents
         if f not in direct_dependents
-    ]
+    )
 
     return {
         "direct_dependents": direct_dependents,

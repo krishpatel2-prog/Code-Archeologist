@@ -1,6 +1,7 @@
 from typing import TypedDict, NotRequired, Any
 
 class ArcheologistState(TypedDict):
+    job_id: str
     repo_path: str
 
     file_tree: dict

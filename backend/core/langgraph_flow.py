@@ -131,7 +131,7 @@ def generate_wiki(state):
 
     # Store in vector DB
     store_wiki_chunks(
-        job_id="default",   # for now static
+        job_id=state.get("job_id", "manual"),
         wiki=wiki
     )
 

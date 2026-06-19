@@ -18,11 +18,15 @@ def build_wiki(state):
         import_count = len(parsed.get("imports", []))
         dependency_count = graph.out_degree(file) if graph is not None and file in graph else 0
         key_dependencies = summary.get("key_dependencies", [])
+        parse_error = parsed.get("parse_error")
 
         modules.append({
             "file": file,
             "role": summary.get("role"),
-            "responsibility": summary.get("responsibility"),
+            "responsibility": (
+                f"Could not parse this file: {parse_error}"
+                if parse_error else summary.get("responsibility")
+            ),
             "risk_level": summary.get("risk_level"),
             "key_dependencies": key_dependencies,
             "metrics": {

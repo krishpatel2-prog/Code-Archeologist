@@ -12,6 +12,7 @@ export interface FileTreeNode {
 export interface LayerSummary {
   name: string
   responsibility: string
+  evidence: string[]
 }
 
 export interface HotspotSummary {
@@ -103,6 +104,8 @@ export function getLayers(wiki: WikiResponse): LayerSummary[] {
         ['responsibility', 'description', 'details'],
         'No responsibility details provided.',
       ),
+      evidence: asArray(row.evidence ?? row.files)
+        .filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0),
     }
   })
 }
